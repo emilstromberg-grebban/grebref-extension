@@ -64,6 +64,7 @@ const Overlay = () => {
   const [uploadedUuid, setUploadedUuid] = useState<string | null>(null)
   const [showUploadSuccess, setShowUploadSuccess] = useState(false)
   const [timeLeft, setTimeLeft] = useState(15)
+  const [isCapturing, setIsCapturing] = useState(false)
   const uploadSuccessTimeoutRef = useRef<number | null>(null)
   const countdownIntervalRef = useRef<number | null>(null)
 
@@ -165,6 +166,12 @@ const Overlay = () => {
       console.log("✅ Starting capture process...")
       setDrag(null)
       
+      // Hide overlays during capture
+      setIsCapturing(true)
+      
+      // Small delay to ensure overlays are hidden before capture
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
       try {
         // Add timeout to prevent hanging
         const res = await chrome.runtime.sendMessage({ type: "CAPTURE" });
@@ -205,15 +212,18 @@ const Overlay = () => {
           console.log("✅ Cropped image created, length:", cropped.length)
           setPreview(cropped)
           setMode(null)
+          setIsCapturing(false) // Restore overlays
           console.log("🎉 Preview set and mode cleared")
         }
         img.onerror = (error) => {
           console.error("❌ Image load error:", error)
+          setIsCapturing(false) // Restore overlays on error
         }
         img.src = dataUrl
       } catch (error) {
         console.error("❌ Error in capture process:", error)
         alert("Error: " + error)
+        setIsCapturing(false) // Restore overlays on error
       }
     }
     document.addEventListener("mousedown", onDown, true)
@@ -289,7 +299,7 @@ const Overlay = () => {
 
   return (
     <>
-      {(mode === "image") && (
+      {(mode === "image") && !isCapturing && (
         <div className="fixed inset-0 z-overlay cursor-crosshair bg-black/5">
           <div className="fixed top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-1.5 text-xs leading-tight font-sans bg-black/70 text-white rounded-md z-hint">IMAGE-snipp (Ctrl+S). Dra för att markera. Esc avbryter.</div>
           {rect && <div className="fixed border-2 border-dashed border-blue-600 bg-blue-500/15 pointer-events-none" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} />}
@@ -408,6 +418,7 @@ const Overlay = () => {
     setPickedEl(null)
     setUploadedUuid(null)
     setShowUploadSuccess(false)
+    setIsCapturing(false)
     
     // Clear any pending timeout and interval
     if (uploadSuccessTimeoutRef.current) {
