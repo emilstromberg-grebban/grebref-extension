@@ -62,6 +62,31 @@ const Overlay = () => {
   const [hoverEl, setHoverEl] = useState<HTMLElement | null>(null)
   const [pickedEl, setPickedEl] = useState<HTMLElement | null>(null)
   const [uploadedUuid, setUploadedUuid] = useState<string | null>(null)
+  const [showUploadSuccess, setShowUploadSuccess] = useState(false)
+  const uploadSuccessTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Auto-hide upload success popup after 15 seconds
+  useEffect(() => {
+    if (showUploadSuccess) {
+      // Clear any existing timeout
+      if (uploadSuccessTimeoutRef.current) {
+        clearTimeout(uploadSuccessTimeoutRef.current)
+      }
+      
+      // Set new timeout
+      uploadSuccessTimeoutRef.current = setTimeout(() => {
+        setShowUploadSuccess(false)
+        setUploadedUuid(null)
+      }, 15000) // 15 seconds
+    }
+
+    // Cleanup timeout on unmount or when showUploadSuccess changes
+    return () => {
+      if (uploadSuccessTimeoutRef.current) {
+        clearTimeout(uploadSuccessTimeoutRef.current)
+      }
+    }
+  }, [showUploadSuccess])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -221,11 +246,12 @@ const Overlay = () => {
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
 
         // Extract UUID from response
-      const responseData = await res.json()
-      const uuid = responseData.uuid
-      if (uuid) {
-        setUploadedUuid(uuid)
-      }
+       const responseData = await res.json()
+       const uuid = responseData.uuid
+       if (uuid) {
+         setUploadedUuid(uuid)
+         setShowUploadSuccess(true)
+       }
 
     } catch (err: any) {
       alert("Upload misslyckades: " + err?.message)
@@ -233,7 +259,7 @@ const Overlay = () => {
   }
 
   // Render
-  if (!mode && !preview && !domPreview && !uploadedUuid) return (
+  if (!mode && !preview && !domPreview && !showUploadSuccess) return (
     <FloatingHint />
   )
 
@@ -274,7 +300,7 @@ const Overlay = () => {
           </div>
         </div>
       )}
-      {uploadedUuid && (
+      {showUploadSuccess && uploadedUuid && (
         <div 
           className="fixed right-5 bottom-5 z-overlay flex gap-3 p-3 bg-gray-900 text-gray-200 rounded-xl shadow-2xl max-w-[min(90vw,640px)]"
           id="uploaded-container"
@@ -293,12 +319,21 @@ const Overlay = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-3 py-2 bg-blue-600 text-white text-xs font-sans rounded-lg text-center hover:bg-blue-700 transition-colors"
+                onClick={() => {
+                  // Hide popup when user clicks the link
+                  setShowUploadSuccess(false)
+                  setUploadedUuid(null)
+                }}
               >
                 Visa i frontend →
               </a>
               <button 
                 className="px-3 py-2 border border-gray-600 text-gray-300 text-xs font-sans rounded-lg hover:bg-gray-800 transition-colors"
-                onClick={resetAll}
+                onClick={() => {
+                  // Hide popup when user clicks close
+                  setShowUploadSuccess(false)
+                  setUploadedUuid(null)
+                }}
               >
                 Stäng
               </button>
@@ -335,7 +370,13 @@ const Overlay = () => {
     setHoverEl(null)
     setPickedEl(null)
     setUploadedUuid(null)
-
+    setShowUploadSuccess(false)
+    
+    // Clear any pending timeout
+    if (uploadSuccessTimeoutRef.current) {
+      clearTimeout(uploadSuccessTimeoutRef.current)
+      uploadSuccessTimeoutRef.current = null
+    }
   }
 }
 
