@@ -63,27 +63,51 @@ const Overlay = () => {
   const [pickedEl, setPickedEl] = useState<HTMLElement | null>(null)
   const [uploadedUuid, setUploadedUuid] = useState<string | null>(null)
   const [showUploadSuccess, setShowUploadSuccess] = useState(false)
-  const uploadSuccessTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [timeLeft, setTimeLeft] = useState(15)
+  const uploadSuccessTimeoutRef = useRef<number | null>(null)
+  const countdownIntervalRef = useRef<number | null>(null)
 
   // Auto-hide upload success popup after 15 seconds
   useEffect(() => {
     if (showUploadSuccess) {
-      // Clear any existing timeout
+      // Reset time left
+      setTimeLeft(15)
+      
+      // Clear any existing timeout and interval
       if (uploadSuccessTimeoutRef.current) {
         clearTimeout(uploadSuccessTimeoutRef.current)
       }
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current)
+      }
       
-      // Set new timeout
-      uploadSuccessTimeoutRef.current = setTimeout(() => {
+      // Start countdown
+      countdownIntervalRef.current = window.setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            setShowUploadSuccess(false)
+            setUploadedUuid(null)
+            return 15
+          }
+          return prev - 1
+        })
+      }, 1000)
+      
+      // Set timeout as backup
+      uploadSuccessTimeoutRef.current = window.setTimeout(() => {
         setShowUploadSuccess(false)
         setUploadedUuid(null)
+        setTimeLeft(15)
       }, 15000) // 15 seconds
     }
 
-    // Cleanup timeout on unmount or when showUploadSuccess changes
+    // Cleanup timeout and interval on unmount or when showUploadSuccess changes
     return () => {
       if (uploadSuccessTimeoutRef.current) {
         clearTimeout(uploadSuccessTimeoutRef.current)
+      }
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current)
       }
     }
   }, [showUploadSuccess])
@@ -278,7 +302,7 @@ const Overlay = () => {
           <div className="fixed top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-1.5 text-xs leading-tight font-sans bg-black/70 text-white rounded-md z-hint">DOM-snipp (Ctrl+D). Hovra och klicka för att välja element. Esc avbryter.</div>
         </>
       )}
-      {(preview || domPreview) && (
+      {(preview || domPreview) && !showUploadSuccess && (
         <div className="fixed right-5 bottom-5 z-overlay flex gap-3 p-3 bg-gray-900 text-gray-200 rounded-xl shadow-2xl max-w-[min(90vw,640px)]">
           {preview && <img src={preview} alt="Reference Snip" className="block max-w-80 max-h-60 rounded-lg object-contain bg-black" />}
           {domPreview && (
@@ -313,6 +337,17 @@ const Overlay = () => {
             <div className="text-xs text-gray-300">
               Din referens har sparats och kan visas i frontend.
             </div>
+            <div className="flex flex-col gap-1">
+              <div className="w-full bg-gray-700 rounded-full h-1">
+                <div 
+                  className="bg-green-500 h-1 rounded-full transition-all duration-1000 ease-linear"
+                  style={{ width: `${(timeLeft / 15) * 100}%` }}
+                ></div>
+              </div>
+              <div className="text-xs text-gray-400">
+                Stänger automatiskt om {timeLeft}s
+              </div>
+            </div>
             <div className="flex flex-col gap-2">
               <a 
                 href={`${FRONTEND_URL}/library/${uploadedUuid}`}
@@ -323,6 +358,7 @@ const Overlay = () => {
                   // Hide popup when user clicks the link
                   setShowUploadSuccess(false)
                   setUploadedUuid(null)
+                  setTimeLeft(15)
                 }}
               >
                 Visa i frontend →
@@ -333,6 +369,7 @@ const Overlay = () => {
                   // Hide popup when user clicks close
                   setShowUploadSuccess(false)
                   setUploadedUuid(null)
+                  setTimeLeft(15)
                 }}
               >
                 Stäng
@@ -372,11 +409,16 @@ const Overlay = () => {
     setUploadedUuid(null)
     setShowUploadSuccess(false)
     
-    // Clear any pending timeout
+    // Clear any pending timeout and interval
     if (uploadSuccessTimeoutRef.current) {
       clearTimeout(uploadSuccessTimeoutRef.current)
       uploadSuccessTimeoutRef.current = null
     }
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current)
+      countdownIntervalRef.current = null
+    }
+    setTimeLeft(15)
   }
 }
 
