@@ -4,7 +4,50 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Ensure extension elements are always visible and not affected by host page styles */
+:host(plasmo-csui) {
+  all: initial;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #000;
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+  position: fixed !important;
+  z-index: 2147483647 !important;
+}
+
+:host(plasmo-csui) *,
+:host(plasmo-csui) *::before,
+:host(plasmo-csui) *::after {
+  box-sizing: border-box;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+:host(plasmo-csui) button,
+:host(plasmo-csui) input,
+:host(plasmo-csui) textarea {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Override any :not(:defined) rules that might hide our elements */
+:host(plasmo-csui):not(:defined) {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+}
+
 #plasmo-shadow-container {
   all: initial;
   box-sizing: border-box;
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
 }
