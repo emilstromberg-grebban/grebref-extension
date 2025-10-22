@@ -13,7 +13,8 @@ export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"],
 }
 
-const BACKEND_URL = "https://a31e2mrewm.sharedwithexpose.com/api/clips"
+const BACKEND_URL = "https://paul-nonincreasing-rebbeca.ngrok-free.dev/api/clips"
+const FRONTEND_URL = "http://localhost:3000"
 
 
 /**
@@ -60,7 +61,8 @@ const Overlay = () => {
   // DOM mode highlighting
   const [hoverEl, setHoverEl] = useState<HTMLElement | null>(null)
   const [pickedEl, setPickedEl] = useState<HTMLElement | null>(null)
-  
+  const [uploadedUuid, setUploadedUuid] = useState<string | null>(null)
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -217,15 +219,21 @@ const Overlay = () => {
         body: JSON.stringify(payload)
       })
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
-      alert("Uppladdad ✅")
-      resetAll()
+
+        // Extract UUID from response
+      const responseData = await res.json()
+      const uuid = responseData.uuid
+      if (uuid) {
+        setUploadedUuid(uuid)
+      }
+
     } catch (err: any) {
       alert("Upload misslyckades: " + err?.message)
     }
   }
 
   // Render
-  if (!mode && !preview && !domPreview) return (
+  if (!mode && !preview && !domPreview && !uploadedUuid) return (
     <FloatingHint />
   )
 
@@ -256,10 +264,44 @@ const Overlay = () => {
           <div className="flex flex-col gap-2 w-70">
             <input className="w-full px-2.5 py-2 rounded-lg border border-gray-600 bg-gray-800 text-gray-200 text-xs font-sans" placeholder="Beskrivning (valfritt)" value={desc} onChange={(e) => setDesc(e.target.value)} />
             <input className="w-full px-2.5 py-2 rounded-lg border border-gray-600 bg-gray-800 text-gray-200 text-xs font-sans" placeholder="Taggar, kommaseparerade" value={tags} onChange={(e) => setTags(e.target.value)} />
-            <div className="flex gap-2">
-              {preview && <button className="px-2.5 py-2 border-0 rounded-lg bg-blue-600 text-white text-xs font-sans cursor-pointer" onClick={() => downloadDataUrl(preview!, "snip.png")}>Ladda ned</button>}
+            <div className="flex flex-col gap-2 mt-auto">
               <button className="px-2.5 py-2 border-0 rounded-lg bg-blue-600 text-white text-xs font-sans cursor-pointer" onClick={doUpload}>Ladda upp</button>
-              <button className="px-2.5 py-2 border-0 rounded-lg bg-blue-600 text-white text-xs font-sans cursor-pointer" onClick={resetAll}>Stäng</button>
+              <div className="flex flex-row gap-2">
+                {preview && <button className="px-2.5 whitespace-nowrap flex-1 py-2 border-0 rounded-lg bg-blue-600 text-white text-xs font-sans cursor-pointer" onClick={() => downloadDataUrl(preview!, "snip.png")}>Ladda ned</button>}
+                <button className="px-2.5 whitespace-nowrap flex-1 py-2 border-0 rounded-lg bg-blue-600 text-white text-xs font-sans cursor-pointer" onClick={resetAll}>Stäng</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {uploadedUuid && (
+        <div 
+          className="fixed right-5 bottom-5 z-overlay flex gap-3 p-3 bg-gray-900 text-gray-200 rounded-xl shadow-2xl max-w-[min(90vw,640px)]"
+          id="uploaded-container"
+        >
+          <div className="flex flex-col gap-3 w-80">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <div className="font-semibold text-sm text-green-400">Uppladdad!</div>
+            </div>
+            <div className="text-xs text-gray-300">
+              Din referens har sparats och kan visas i frontend.
+            </div>
+            <div className="flex flex-col gap-2">
+              <a 
+                href={`${FRONTEND_URL}/library/${uploadedUuid}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-2 bg-blue-600 text-white text-xs font-sans rounded-lg text-center hover:bg-blue-700 transition-colors"
+              >
+                Visa i frontend →
+              </a>
+              <button 
+                className="px-3 py-2 border border-gray-600 text-gray-300 text-xs font-sans rounded-lg hover:bg-gray-800 transition-colors"
+                onClick={resetAll}
+              >
+                Stäng
+              </button>
             </div>
           </div>
         </div>
@@ -292,6 +334,8 @@ const Overlay = () => {
     setTags("")
     setHoverEl(null)
     setPickedEl(null)
+    setUploadedUuid(null)
+
   }
 }
 
