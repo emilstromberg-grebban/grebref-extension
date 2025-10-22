@@ -262,13 +262,62 @@ const Overlay = () => {
   }, [mode, hoverEl])
 
   const doUpload = async () => {
+    // Enhanced payload with additional context data
     const payload: any = {
       url: location.href,
       title: document.title,
       description: desc,
       // tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
       // type: preview ? "image" : "dom"
+      
+      // Enhanced context data for better reference library
+      context: {
+        // Browser and device context
+        viewport: {
+          width: window.innerWidth,
+          height: window.innerHeight,
+          devicePixelRatio: window.devicePixelRatio,
+          userAgent: navigator.userAgent,
+          platform: navigator.platform
+        },
+        
+        // Page context
+        page: {
+          domain: window.location.hostname,
+          path: window.location.pathname,
+          searchParams: Object.fromEntries(new URLSearchParams(window.location.search)),
+          referrer: document.referrer,
+          timestamp: new Date().toISOString(),
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        },
+        
+        // Design context
+        design: {
+          colorScheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+          primaryColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color') || null,
+          fontFamily: getComputedStyle(document.documentElement).fontFamily,
+          fontSize: getComputedStyle(document.documentElement).fontSize
+        },
+        
+        // Technical context
+        technical: {
+          framework: detectFramework(),
+          cssFramework: detectCSSFramework(),
+          hasShadowDOM: document.querySelector('*').shadowRoot !== null,
+          cssVariables: extractCSSVariables(document.documentElement)
+        },
+        
+        // Component context (if we have a selected element)
+        component: rect ? {
+          boundingRect: rect,
+          centerX: rect.x + rect.w / 2,
+          centerY: rect.y + rect.h / 2,
+          aspectRatio: rect.w / rect.h,
+          area: rect.w * rect.h
+        } : null
+      }
     }
+    
     if (preview) payload.base64_file = preview
     if (domPreview) payload.domHtml = domPreview
     try {
@@ -519,3 +568,80 @@ const FloatingHint = () => (
       Reference Snipper: tryck <b>Ctrl+S</b> (bild) eller <b>Ctrl+D</b> (DOM).
     </div>
 )
+
+// Utility functions for enhanced context detection
+function detectFramework(): string | null {
+  // Check for React.js
+  if (!!(window as any).React || 
+      !!(window as any).__REACT_DEVTOOLS_GLOBAL_HOOK__ ||
+      !!document.querySelector('[data-reactroot], [data-reactid]')) {
+    return 'React.js'
+  }
+  
+  // Check for Next.js
+  if (!!document.querySelector('script[id=__NEXT_DATA__]')) {
+    return 'Next.js'
+  }
+  
+  // Check for Gatsby.js
+  if (!!document.querySelector('[id=___gatsby]')) {
+    return 'Gatsby.js'
+  }
+  
+  // Check for Angular.js (Angular 1.x)
+  if (!!(window as any).angular ||
+      !!document.querySelector('.ng-binding, [ng-app], [data-ng-app], [ng-controller], [data-ng-controller], [ng-repeat], [data-ng-repeat]') ||
+      !!document.querySelector('script[src*="angular.js"], script[src*="angular.min.js"]')) {
+    return 'Angular.js'
+  }
+  
+  // Check for Angular 2+
+  if (!!(window as any).getAllAngularRootElements ||
+      !!(window as any).ng?.coreTokens?.NgZone) {
+    return 'Angular 2+'
+  }
+  
+  // Check for other frameworks
+  if (!!(window as any).Backbone) return 'Backbone.js'
+  if (!!(window as any).Ember) return 'Ember.js'
+  if (!!(window as any).Vue) return 'Vue.js'
+  if (!!(window as any).Meteor) return 'Meteor.js'
+  if (!!(window as any).Zepto) return 'Zepto.js'
+  if (!!(window as any).jQuery) return 'jQuery.js'
+  
+  return null
+}
+
+function detectCSSFramework(): string | null {
+  // Check for Tailwind
+  if (document.querySelector('[class*="bg-"]') || document.querySelector('[class*="text-"]')) return 'Tailwind'
+  
+  // Check for Bootstrap
+  if (document.querySelector('.container') || document.querySelector('.row')) return 'Bootstrap'
+  
+  // Check for Material-UI
+  if (document.querySelector('[class*="Mui"]')) return 'Material-UI'
+  
+  return null
+}
+
+function extractCSSVariables(element: HTMLElement): Record<string, string> {
+  const variables: Record<string, string> = {}
+  const computedStyle = getComputedStyle(element)
+  
+  // Extract common CSS custom properties
+  const commonVars = [
+    '--primary-color', '--secondary-color', '--accent-color',
+    '--text-color', '--background-color', '--border-color',
+    '--font-family', '--font-size', '--spacing'
+  ]
+  
+  commonVars.forEach(varName => {
+    const value = computedStyle.getPropertyValue(varName)
+    if (value) {
+      variables[varName] = value.trim()
+    }
+  })
+  
+  return variables
+}
