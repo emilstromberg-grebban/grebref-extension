@@ -13,8 +13,8 @@ export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"],
 }
 
-const BACKEND_URL = "https://paul-nonincreasing-rebbeca.ngrok-free.dev/api/clips"
-const FRONTEND_URL = "http://localhost:3000"
+const BACKEND_URL = "http://16.170.169.187/api/clips"
+const FRONTEND_URL = "https://grebref-frontend-one.vercel.app/"
 
 
 /**
@@ -51,8 +51,8 @@ type Mode = "image" | "dom" | "fullpage"
 
 const Overlay = () => {
   const [mode, setMode] = useState<Mode | null>(null)
-  const [rect, setRect] = useState<{x:number, y:number, w:number, h:number} | null>(null)
-  const [drag, setDrag] = useState<{startX:number, startY:number} | null>(null)
+  const [rect, setRect] = useState<{ x: number, y: number, w: number, h: number } | null>(null)
+  const [drag, setDrag] = useState<{ startX: number, startY: number } | null>(null)
   const [preview, setPreview] = useState<string | null>(null) // image dataURL
   const [domPreview, setDomPreview] = useState<string | null>(null) // serialized HTML string
   const [desc, setDesc] = useState("")
@@ -73,7 +73,7 @@ const Overlay = () => {
     if (showUploadSuccess) {
       // Reset time left
       setTimeLeft(15)
-      
+
       // Clear any existing timeout and interval
       if (uploadSuccessTimeoutRef.current) {
         clearTimeout(uploadSuccessTimeoutRef.current)
@@ -81,7 +81,7 @@ const Overlay = () => {
       if (countdownIntervalRef.current) {
         clearInterval(countdownIntervalRef.current)
       }
-      
+
       // Start countdown
       countdownIntervalRef.current = window.setInterval(() => {
         setTimeLeft(prev => {
@@ -93,7 +93,7 @@ const Overlay = () => {
           return prev - 1
         })
       }, 1000)
-      
+
       // Set timeout as backup
       uploadSuccessTimeoutRef.current = window.setTimeout(() => {
         setShowUploadSuccess(false)
@@ -163,58 +163,58 @@ const Overlay = () => {
       console.log("🖱️ Mouse up event triggered")
       console.log("📏 Drag state:", drag)
       console.log("📐 Rect state:", rect)
-      
+
       if (!drag || !rect) {
         console.log("❌ Missing drag or rect state, aborting")
         return
       }
-      
+
       console.log("✅ Starting capture process...")
       setDrag(null)
-      
+
       // Hide overlays during capture
       setIsCapturing(true)
-      
+
       // Small delay to ensure overlays are hidden before capture
       await new Promise(resolve => setTimeout(resolve, 100))
-      
+
       try {
         // Add timeout to prevent hanging
         const res = await chrome.runtime.sendMessage({ type: "CAPTURE" });
-        
+
         console.log("📸 Capture response:", res)
-        
+
         if (!res?.ok) {
           console.error("❌ Capture failed:", res?.error)
           alert("Capture failed: " + (res?.error ?? "unknown"))
           return
         }
-        
+
         const dataUrl: string = res.dataUrl
         console.log("🖼️ Data URL length:", dataUrl.length)
-        
+
         const img = new Image()
         img.onload = () => {
           console.log("🖼️ Image loaded, dimensions:", img.width, "x", img.height)
           console.log("🖼️ Window dimensions:", window.innerWidth, "x", window.innerHeight)
-          
+
           const scale = img.width / window.innerWidth
           console.log("📏 Scale factor:", scale)
-          
+
           const sx = Math.round(rect.x * scale)
           const sy = Math.round(rect.y * scale)
           const sw = Math.round(rect.w * scale)
           const sh = Math.round(rect.h * scale)
-          
+
           console.log("✂️ Crop coordinates:", { sx, sy, sw, sh })
-          
+
           const canvas = document.createElement("canvas")
           canvas.width = Math.max(1, sw)
           canvas.height = Math.max(1, sh)
           const ctx = canvas.getContext("2d")!
           ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh)
           const cropped = canvas.toDataURL("image/png")
-          
+
           console.log("✅ Cropped image created, length:", cropped.length)
           setPreview(cropped)
           setMode(null)
@@ -270,39 +270,39 @@ const Overlay = () => {
   // FULL PAGE MODE capture
   useEffect(() => {
     if (mode !== "fullpage") return
-    
+
     const captureFullPage = async () => {
       console.log("📸 Starting full page capture...")
       setIsCapturing(true)
-      
+
       try {
         const res = await chrome.runtime.sendMessage({ type: "CAPTURE_FULL_PAGE" })
-        
+
         console.log("📸 Full page capture response:", res)
-        
+
         if (!res?.ok) {
           console.error("❌ Full page capture failed:", res?.error)
           alert("Full page capture failed: " + (res?.error ?? "unknown"))
           return
         }
-        
+
         const dataUrl: string = res.dataUrl
         const pageDimensions = res.pageDimensions
         console.log("🖼️ Full page data URL length:", dataUrl.length)
         console.log("📏 Page dimensions:", pageDimensions)
-        
+
         setPreview(dataUrl)
         setMode(null)
         setIsCapturing(false)
         console.log("🎉 Full page preview set and mode cleared")
-        
+
       } catch (error) {
         console.error("❌ Error in full page capture process:", error)
         alert("Error: " + error)
         setIsCapturing(false)
       }
     }
-    
+
     // Auto-capture when entering full page mode
     captureFullPage()
   }, [mode])
@@ -315,7 +315,7 @@ const Overlay = () => {
       description: desc,
       // tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
       // type: preview ? "image" : "dom"
-      
+
       // Enhanced context data for better reference library
       context: {
         // Browser and device context
@@ -326,7 +326,7 @@ const Overlay = () => {
           userAgent: navigator.userAgent,
           platform: navigator.platform
         },
-        
+
         // Page context
         page: {
           domain: window.location.hostname,
@@ -336,7 +336,7 @@ const Overlay = () => {
           timestamp: new Date().toISOString(),
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
         },
-        
+
         // Design context
         design: {
           colorScheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
@@ -344,7 +344,7 @@ const Overlay = () => {
           fontFamily: getComputedStyle(document.documentElement).fontFamily,
           fontSize: getComputedStyle(document.documentElement).fontSize
         },
-        
+
         // Technical context
         technical: {
           framework: detectFramework(),
@@ -352,7 +352,7 @@ const Overlay = () => {
           hasShadowDOM: document.querySelector('*').shadowRoot !== null,
           cssVariables: extractCSSVariables(document.documentElement)
         },
-        
+
         // Component context (if we have a selected element)
         component: rect ? {
           boundingRect: rect,
@@ -363,7 +363,7 @@ const Overlay = () => {
         } : null
       }
     }
-    
+
     if (preview) payload.base64_file = preview
     if (domPreview) payload.domHtml = domPreview
     try {
@@ -374,13 +374,13 @@ const Overlay = () => {
       })
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
 
-        // Extract UUID from response
-       const responseData = await res.json()
-       const uuid = responseData.uuid
-       if (uuid) {
-         setUploadedUuid(uuid)
-         setShowUploadSuccess(true)
-       }
+      // Extract UUID from response
+      const responseData = await res.json()
+      const uuid = responseData.uuid
+      if (uuid) {
+        setUploadedUuid(uuid)
+        setShowUploadSuccess(true)
+      }
 
     } catch (err: any) {
       alert("Upload misslyckades: " + err?.message)
@@ -397,7 +397,7 @@ const Overlay = () => {
       {(mode === "image") && !isCapturing && (
         <div className="fixed inset-0 z-overlay cursor-crosshair bg-black/5">
           <div className="fixed top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-1.5 text-xs leading-tight font-sans bg-black/70 text-white rounded-md z-hint">IMAGE mode (Ctrl+S). Drag to select area. Esc to cancel.</div>
-          {rect && <div className="fixed border-2 border-dashed border-blue-600 bg-blue-500/15 pointer-events-none" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} />}
+          {rect && <div className="fixed border-2 border-blue-600 border-dashed pointer-events-none bg-blue-500/15" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} />}
         </div>
       )}
       {(mode === "dom") && (
@@ -414,11 +414,11 @@ const Overlay = () => {
       )}
       {(preview || domPreview) && !showUploadSuccess && (
         <div className="fixed right-5 bottom-5 z-overlay flex gap-3 p-3 bg-gray-900 text-gray-200 rounded-xl shadow-2xl max-w-[min(90vw,640px)]">
-          {preview && <img src={preview} alt="GrebRef" className="block max-w-80 max-h-60 rounded-lg object-contain bg-black" />}
+          {preview && <img src={preview} alt="GrebRef" className="block object-contain bg-black rounded-lg max-w-80 max-h-60" />}
           {domPreview && (
             <div className="flex flex-col gap-1.5 w-80 max-h-65">
-              <div className="font-semibold text-xs text-gray-300">DOM snippet</div>
-              <textarea className="w-full h-55 bg-gray-800 text-gray-300 border border-gray-600 rounded-lg p-2 text-xs leading-snug font-mono resize-y" readOnly value={domPreview} />
+              <div className="text-xs font-semibold text-gray-300">DOM snippet</div>
+              <textarea className="w-full p-2 font-mono text-xs leading-snug text-gray-300 bg-gray-800 border border-gray-600 rounded-lg resize-y h-55" readOnly value={domPreview} />
             </div>
           )}
           <div className="flex flex-col gap-2 w-70">
@@ -435,22 +435,22 @@ const Overlay = () => {
         </div>
       )}
       {showUploadSuccess && uploadedUuid && (
-        <div 
+        <div
           className="fixed right-5 bottom-5 z-overlay flex gap-3 p-3 bg-gray-900 text-gray-200 rounded-xl shadow-2xl max-w-[min(90vw,640px)]"
           id="uploaded-container"
         >
           <div className="flex flex-col gap-3 w-80">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <div className="font-semibold text-sm text-green-400">Uploaded!</div>
+              <div className="text-sm font-semibold text-green-400">Uploaded!</div>
             </div>
             <div className="text-xs text-gray-300">
               Your reference has been saved and can be viewed in the frontend.
             </div>
             <div className="flex flex-col gap-1">
-              <div className="w-full bg-gray-700 rounded-full h-1">
-                <div 
-                  className="bg-green-500 h-1 rounded-full transition-all duration-1000 ease-linear"
+              <div className="w-full h-1 bg-gray-700 rounded-full">
+                <div
+                  className="h-1 transition-all duration-1000 ease-linear bg-green-500 rounded-full"
                   style={{ width: `${(timeLeft / 15) * 100}%` }}
                 ></div>
               </div>
@@ -459,11 +459,11 @@ const Overlay = () => {
               </div>
             </div>
             <div className="flex flex-col gap-2">
-              <a 
+              <a
                 href={`${FRONTEND_URL}/library/${uploadedUuid}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-2 bg-blue-600 text-white text-xs font-sans rounded-lg text-center hover:bg-blue-700 transition-colors"
+                className="px-3 py-2 font-sans text-xs text-center text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
                 onClick={() => {
                   // Hide popup when user clicks the link
                   setShowUploadSuccess(false)
@@ -473,8 +473,8 @@ const Overlay = () => {
               >
                 View in frontend →
               </a>
-              <button 
-                className="px-3 py-2 border border-gray-600 text-gray-300 text-xs font-sans rounded-lg hover:bg-gray-800 transition-colors"
+              <button
+                className="px-3 py-2 font-sans text-xs text-gray-300 transition-colors border border-gray-600 rounded-lg hover:bg-gray-800"
                 onClick={() => {
                   // Hide popup when user clicks close
                   setShowUploadSuccess(false)
@@ -507,7 +507,7 @@ const Overlay = () => {
     setDesc("")
     setTags("")
   }
-  
+
   function activateFullPageMode() {
     setMode("fullpage")
     setRect(null)
@@ -528,7 +528,7 @@ const Overlay = () => {
     setUploadedUuid(null)
     setShowUploadSuccess(false)
     setIsCapturing(false)
-    
+
     // Clear any pending timeout and interval
     if (uploadSuccessTimeoutRef.current) {
       clearTimeout(uploadSuccessTimeoutRef.current)
@@ -580,12 +580,12 @@ function serializeWithStyles(rootEl: HTMLElement): string {
 function inlineComputed(src: HTMLElement, dst: HTMLElement) {
   const cs = window.getComputedStyle(src)
   const styleProps = [
-    "position","display","flex","flexDirection","justifyContent","alignItems","gap","width","height",
-    "minWidth","minHeight","maxWidth","maxHeight","padding","paddingTop","paddingRight","paddingBottom","paddingLeft",
-    "margin","marginTop","marginRight","marginBottom","marginLeft","border","borderRadius","background","backgroundColor",
-    "backgroundImage","backgroundSize","backgroundPosition","backgroundRepeat","color","font","fontFamily","fontSize",
-    "fontWeight","lineHeight","letterSpacing","textAlign","textDecoration","boxShadow","overflow","overflowX","overflowY",
-    "objectFit","objectPosition","opacity","transform","transition","whiteSpace"
+    "position", "display", "flex", "flexDirection", "justifyContent", "alignItems", "gap", "width", "height",
+    "minWidth", "minHeight", "maxWidth", "maxHeight", "padding", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft",
+    "margin", "marginTop", "marginRight", "marginBottom", "marginLeft", "border", "borderRadius", "background", "backgroundColor",
+    "backgroundImage", "backgroundSize", "backgroundPosition", "backgroundRepeat", "color", "font", "fontFamily", "fontSize",
+    "fontWeight", "lineHeight", "letterSpacing", "textAlign", "textDecoration", "boxShadow", "overflow", "overflowX", "overflowY",
+    "objectFit", "objectPosition", "opacity", "transform", "transition", "whiteSpace"
   ]
   const styleStr = styleProps
     .map((p) => {
@@ -611,8 +611,8 @@ function camelToKebab(s: string) {
 const OutlineBox = ({ el }: { el: HTMLElement }) => {
   const rect = el.getBoundingClientRect()
   return (
-    <div 
-      className="fixed border-2 border-blue-600 bg-blue-500/8 z-overlay pointer-events-none"
+    <div
+      className="fixed border-2 border-blue-600 pointer-events-none bg-blue-500/8 z-overlay"
       style={{
         left: rect.left + "px",
         top: rect.top + "px",
@@ -625,42 +625,42 @@ const OutlineBox = ({ el }: { el: HTMLElement }) => {
 
 const FloatingHint = () => (
   <div className="fixed bottom-3 left-3 px-2.5 py-1.5 text-xs leading-tight font-sans bg-black/70 text-white rounded-md z-hint pointer-events-none">
-      GrebRef: Press <b>Ctrl+S</b> (image), <b>Ctrl+D</b> (DOM) or <b>Ctrl+F</b> (full page).
-    </div>
+    GrebRef: Press <b>Ctrl+S</b> (image), <b>Ctrl+D</b> (DOM) or <b>Ctrl+F</b> (full page).
+  </div>
 )
 
 // Utility functions for enhanced context detection
 function detectFramework(): string | null {
   // Check for React.js
-  if (!!(window as any).React || 
-      !!(window as any).__REACT_DEVTOOLS_GLOBAL_HOOK__ ||
-      !!document.querySelector('[data-reactroot], [data-reactid]')) {
+  if (!!(window as any).React ||
+    !!(window as any).__REACT_DEVTOOLS_GLOBAL_HOOK__ ||
+    !!document.querySelector('[data-reactroot], [data-reactid]')) {
     return 'React.js'
   }
-  
+
   // Check for Next.js
   if (!!document.querySelector('script[id=__NEXT_DATA__]')) {
     return 'Next.js'
   }
-  
+
   // Check for Gatsby.js
   if (!!document.querySelector('[id=___gatsby]')) {
     return 'Gatsby.js'
   }
-  
+
   // Check for Angular.js (Angular 1.x)
   if (!!(window as any).angular ||
-      !!document.querySelector('.ng-binding, [ng-app], [data-ng-app], [ng-controller], [data-ng-controller], [ng-repeat], [data-ng-repeat]') ||
-      !!document.querySelector('script[src*="angular.js"], script[src*="angular.min.js"]')) {
+    !!document.querySelector('.ng-binding, [ng-app], [data-ng-app], [ng-controller], [data-ng-controller], [ng-repeat], [data-ng-repeat]') ||
+    !!document.querySelector('script[src*="angular.js"], script[src*="angular.min.js"]')) {
     return 'Angular.js'
   }
-  
+
   // Check for Angular 2+
   if (!!(window as any).getAllAngularRootElements ||
-      !!(window as any).ng?.coreTokens?.NgZone) {
+    !!(window as any).ng?.coreTokens?.NgZone) {
     return 'Angular 2+'
   }
-  
+
   // Check for other frameworks
   if (!!(window as any).Backbone) return 'Backbone.js'
   if (!!(window as any).Ember) return 'Ember.js'
@@ -668,40 +668,40 @@ function detectFramework(): string | null {
   if (!!(window as any).Meteor) return 'Meteor.js'
   if (!!(window as any).Zepto) return 'Zepto.js'
   if (!!(window as any).jQuery) return 'jQuery.js'
-  
+
   return null
 }
 
 function detectCSSFramework(): string | null {
   // Check for Tailwind
   if (document.querySelector('[class*="bg-"]') || document.querySelector('[class*="text-"]')) return 'Tailwind'
-  
+
   // Check for Bootstrap
   if (document.querySelector('.container') || document.querySelector('.row')) return 'Bootstrap'
-  
+
   // Check for Material-UI
   if (document.querySelector('[class*="Mui"]')) return 'Material-UI'
-  
+
   return null
 }
 
 function extractCSSVariables(element: HTMLElement): Record<string, string> {
   const variables: Record<string, string> = {}
   const computedStyle = getComputedStyle(element)
-  
+
   // Extract common CSS custom properties
   const commonVars = [
     '--primary-color', '--secondary-color', '--accent-color',
     '--text-color', '--background-color', '--border-color',
     '--font-family', '--font-size', '--spacing'
   ]
-  
+
   commonVars.forEach(varName => {
     const value = computedStyle.getPropertyValue(varName)
     if (value) {
       variables[varName] = value.trim()
     }
   })
-  
+
   return variables
 }
