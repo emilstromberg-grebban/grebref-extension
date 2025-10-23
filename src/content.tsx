@@ -47,7 +47,7 @@ export const getStyle = (): HTMLStyleElement => {
   return styleElement
 }
 
-type Mode = "image" | "dom"
+type Mode = "image" | "dom" | "fullpage"
 
 const Overlay = () => {
   const [mode, setMode] = useState<Mode | null>(null)
@@ -130,6 +130,12 @@ const Overlay = () => {
         console.log("Ctrl+D")
         e.preventDefault()
         activateDomMode()
+      }
+      // Ctrl+F => Full page mode
+      if (e.ctrlKey && e.key.toLowerCase() === "f") {
+        console.log("Ctrl+F")
+        e.preventDefault()
+        activateFullPageMode()
       }
     }
     window.addEventListener("keydown", onKey)
@@ -261,6 +267,46 @@ const Overlay = () => {
     }
   }, [mode, hoverEl])
 
+  // FULL PAGE MODE capture
+  useEffect(() => {
+    if (mode !== "fullpage") return
+    
+    const captureFullPage = async () => {
+      console.log("📸 Starting full page capture...")
+      setIsCapturing(true)
+      
+      try {
+        const res = await chrome.runtime.sendMessage({ type: "CAPTURE_FULL_PAGE" })
+        
+        console.log("📸 Full page capture response:", res)
+        
+        if (!res?.ok) {
+          console.error("❌ Full page capture failed:", res?.error)
+          alert("Full page capture failed: " + (res?.error ?? "unknown"))
+          return
+        }
+        
+        const dataUrl: string = res.dataUrl
+        const pageDimensions = res.pageDimensions
+        console.log("🖼️ Full page data URL length:", dataUrl.length)
+        console.log("📏 Page dimensions:", pageDimensions)
+        
+        setPreview(dataUrl)
+        setMode(null)
+        setIsCapturing(false)
+        console.log("🎉 Full page preview set and mode cleared")
+        
+      } catch (error) {
+        console.error("❌ Error in full page capture process:", error)
+        alert("Error: " + error)
+        setIsCapturing(false)
+      }
+    }
+    
+    // Auto-capture when entering full page mode
+    captureFullPage()
+  }, [mode])
+
   const doUpload = async () => {
     // Enhanced payload with additional context data
     const payload: any = {
@@ -350,7 +396,7 @@ const Overlay = () => {
     <>
       {(mode === "image") && !isCapturing && (
         <div className="fixed inset-0 z-overlay cursor-crosshair bg-black/5">
-          <div className="fixed top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-1.5 text-xs leading-tight font-sans bg-black/70 text-white rounded-md z-hint">IMAGE-snipp (Ctrl+S). Dra för att markera. Esc avbryter.</div>
+          <div className="fixed top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-1.5 text-xs leading-tight font-sans bg-black/70 text-white rounded-md z-hint">IMAGE mode (Ctrl+S). Drag to select area. Esc to cancel.</div>
           {rect && <div className="fixed border-2 border-dashed border-blue-600 bg-blue-500/15 pointer-events-none" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} />}
         </div>
       )}
@@ -358,26 +404,31 @@ const Overlay = () => {
         <>
           <div className="fixed inset-0 z-[2147483646] bg-black/4 cursor-crosshair" />
           {hoverEl && <OutlineBox el={hoverEl} />}
-          <div className="fixed top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-1.5 text-xs leading-tight font-sans bg-black/70 text-white rounded-md z-hint">DOM-snipp (Ctrl+D). Hovra och klicka för att välja element. Esc avbryter.</div>
+          <div className="fixed top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-1.5 text-xs leading-tight font-sans bg-black/70 text-white rounded-md z-hint">DOM mode (Ctrl+D). Hover and click to select element. Esc to cancel.</div>
         </>
+      )}
+      {(mode === "fullpage") && (
+        <div className="fixed top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-1.5 text-xs leading-tight font-sans bg-black/70 text-white rounded-md z-hint">
+          Full page capture (Ctrl+F). Capturing entire page... Esc to cancel.
+        </div>
       )}
       {(preview || domPreview) && !showUploadSuccess && (
         <div className="fixed right-5 bottom-5 z-overlay flex gap-3 p-3 bg-gray-900 text-gray-200 rounded-xl shadow-2xl max-w-[min(90vw,640px)]">
-          {preview && <img src={preview} alt="Reference Snip" className="block max-w-80 max-h-60 rounded-lg object-contain bg-black" />}
+          {preview && <img src={preview} alt="GrebRef" className="block max-w-80 max-h-60 rounded-lg object-contain bg-black" />}
           {domPreview && (
             <div className="flex flex-col gap-1.5 w-80 max-h-65">
-              <div className="font-semibold text-xs text-gray-300">DOM-snipp</div>
+              <div className="font-semibold text-xs text-gray-300">DOM snippet</div>
               <textarea className="w-full h-55 bg-gray-800 text-gray-300 border border-gray-600 rounded-lg p-2 text-xs leading-snug font-mono resize-y" readOnly value={domPreview} />
             </div>
           )}
           <div className="flex flex-col gap-2 w-70">
-            <input className="w-full px-2.5 py-2 rounded-lg border border-gray-600 bg-gray-800 text-gray-200 text-xs font-sans" placeholder="Beskrivning (valfritt)" value={desc} onChange={(e) => setDesc(e.target.value)} />
-            <input className="w-full px-2.5 py-2 rounded-lg border border-gray-600 bg-gray-800 text-gray-200 text-xs font-sans" placeholder="Taggar, kommaseparerade" value={tags} onChange={(e) => setTags(e.target.value)} />
+            <input className="w-full px-2.5 py-2 rounded-lg border border-gray-600 bg-gray-800 text-gray-200 text-xs font-sans" placeholder="Description (optional)" value={desc} onChange={(e) => setDesc(e.target.value)} />
+            <input className="w-full px-2.5 py-2 rounded-lg border border-gray-600 bg-gray-800 text-gray-200 text-xs font-sans" placeholder="Tags, comma-separated" value={tags} onChange={(e) => setTags(e.target.value)} />
             <div className="flex flex-col gap-2 mt-auto">
-              <button className="px-2.5 py-2 border-0 rounded-lg bg-blue-600 text-white text-xs font-sans cursor-pointer" onClick={doUpload}>Ladda upp</button>
+              <button className="px-2.5 py-2 border-0 rounded-lg bg-blue-600 text-white text-xs font-sans cursor-pointer" onClick={doUpload}>Upload</button>
               <div className="flex flex-row gap-2">
-                {preview && <button className="px-2.5 whitespace-nowrap flex-1 py-2 border-0 rounded-lg bg-blue-600 text-white text-xs font-sans cursor-pointer" onClick={() => downloadDataUrl(preview!, "snip.png")}>Ladda ned</button>}
-                <button className="px-2.5 whitespace-nowrap flex-1 py-2 border-0 rounded-lg bg-blue-600 text-white text-xs font-sans cursor-pointer" onClick={resetAll}>Stäng</button>
+                {preview && <button className="px-2.5 whitespace-nowrap flex-1 py-2 border-0 rounded-lg bg-blue-600 text-white text-xs font-sans cursor-pointer" onClick={() => downloadDataUrl(preview!, "snip.png")}>Download</button>}
+                <button className="px-2.5 whitespace-nowrap flex-1 py-2 border-0 rounded-lg bg-blue-600 text-white text-xs font-sans cursor-pointer" onClick={resetAll}>Close</button>
               </div>
             </div>
           </div>
@@ -391,10 +442,10 @@ const Overlay = () => {
           <div className="flex flex-col gap-3 w-80">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <div className="font-semibold text-sm text-green-400">Uppladdad!</div>
+              <div className="font-semibold text-sm text-green-400">Uploaded!</div>
             </div>
             <div className="text-xs text-gray-300">
-              Din referens har sparats och kan visas i frontend.
+              Your reference has been saved and can be viewed in the frontend.
             </div>
             <div className="flex flex-col gap-1">
               <div className="w-full bg-gray-700 rounded-full h-1">
@@ -404,7 +455,7 @@ const Overlay = () => {
                 ></div>
               </div>
               <div className="text-xs text-gray-400">
-                Stänger automatiskt om {timeLeft}s
+                Auto-closes in {timeLeft}s
               </div>
             </div>
             <div className="flex flex-col gap-2">
@@ -420,7 +471,7 @@ const Overlay = () => {
                   setTimeLeft(15)
                 }}
               >
-                Visa i frontend →
+                View in frontend →
               </a>
               <button 
                 className="px-3 py-2 border border-gray-600 text-gray-300 text-xs font-sans rounded-lg hover:bg-gray-800 transition-colors"
@@ -431,7 +482,7 @@ const Overlay = () => {
                   setTimeLeft(15)
                 }}
               >
-                Stäng
+                Close
               </button>
             </div>
           </div>
@@ -450,6 +501,15 @@ const Overlay = () => {
   }
   function activateDomMode() {
     setMode("dom")
+    setRect(null)
+    setPreview(null)
+    setDomPreview(null)
+    setDesc("")
+    setTags("")
+  }
+  
+  function activateFullPageMode() {
+    setMode("fullpage")
     setRect(null)
     setPreview(null)
     setDomPreview(null)
@@ -565,7 +625,7 @@ const OutlineBox = ({ el }: { el: HTMLElement }) => {
 
 const FloatingHint = () => (
   <div className="fixed bottom-3 left-3 px-2.5 py-1.5 text-xs leading-tight font-sans bg-black/70 text-white rounded-md z-hint pointer-events-none">
-      Reference Snipper: tryck <b>Ctrl+S</b> (bild) eller <b>Ctrl+D</b> (DOM).
+      GrebRef: Press <b>Ctrl+S</b> (image), <b>Ctrl+D</b> (DOM) or <b>Ctrl+F</b> (full page).
     </div>
 )
 

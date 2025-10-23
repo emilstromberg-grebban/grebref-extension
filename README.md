@@ -1,4 +1,4 @@
-# Reference Snipper (Plasmo starter)
+# GrebRef
 
 Minimal MV3-extension byggd med Plasmo, för att lasso-snippa en rektangel av aktuell flik,
 beskära client-side och visa en förhandsvisning (med enkel export). Perfekt start för ert
