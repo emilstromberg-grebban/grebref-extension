@@ -1,4 +1,3 @@
 .plasmo
 build/chrome-mv3-dev
-build/chrome-mv3-prod
 node_modules
