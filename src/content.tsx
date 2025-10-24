@@ -13,7 +13,7 @@ export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"],
 }
 
-const BACKEND_URL = "http://16.170.169.187/api/clips"
+const BACKEND_URL = "https://do9fz3dkd8sl6.cloudfront.net/api/clips"
 const FRONTEND_URL = "https://grebref-frontend-one.vercel.app/"
 
 
